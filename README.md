@@ -19,7 +19,6 @@
 ```powershell
 git clone https://github.com/sanarita/ipi-guard-chat.git
 cd ipi-guard-chat
-python server.py
 ```
 
 Gitを使わない場合は、このページの「Code」→「Download ZIP」でダウンロードして展開してください。
@@ -27,8 +26,9 @@ Gitを使わない場合は、このページの「Code」→「Download ZIP」�
 ## 使い方
 
 ```powershell
-uv run python server.py      # または python server.py
+python server.py      # macOS / Linux では python3 server.py
 ```
+uv を使っている場合は `uv run python server.py` でも起動できます。
 
 ブラウザで http://127.0.0.1:8765 を開き、📎 から添付するか画面にドラッグします。
 判定後は「なぜ危険？」「どう対処する？」で追加の説明を表示できます。
