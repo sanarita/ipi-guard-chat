@@ -30,7 +30,7 @@ uv run python samples/make_samples.py   # samples/out/ に12件生成
 | `detector.py` | 判定エンジン。形式別に隠し経路を抽出し、経路倍率 ×「指示らしさ」で採点 |
 | `static/` | チャット画面（HTML / CSS / JS） |
 | `samples/make_samples.py` | 手口ごとの検体を自動生成するスクリプト（無害な文言のみ） |
-| `samples/regression/` | 実際に作成・受領した文書の検体。見逃しや誤検知が見つかったファイルを、期待する判定とともに保管 |
+| `samples/regression/` | 実際に作成した文書の検体。見逃しや誤検知が見つかったファイルを、期待する判定とともに保管 |
 | `tests/run_samples.py` | 回帰テスト。上の2種類の検体をすべて判定し、期待どおりかを一覧で表示 |
 
 ## 検査する場所
@@ -75,6 +75,7 @@ uv run python tests/run_samples.py
 
 - **生成検体（12件）**：`samples/make_samples.py` が手口ごとに作る最小限の検体
 - **実資料（`samples/regression/`）**：実際の文書で見つかった見逃し・誤検知の再発防止用
+現在、生成検体12件・実資料5件の計17件すべてが期待どおりに判定されます。
 
 実資料は、ファイル名の末尾に期待する判定を付けて置きます。
 
