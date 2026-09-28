@@ -9,6 +9,21 @@
 
 ![業務連絡に偽装した攻撃文を「隔離」と判定した画面](docs/screenshot-camouflage.png)
 
+## 動作環境
+
+- Python 3.9 以上（追加のライブラリは不要）
+- Windows / macOS / Linux
+
+## 導入
+
+```powershell
+git clone https://github.com/sanarita/ipi-guard-chat.git
+cd ipi-guard-chat
+python server.py
+```
+
+Gitを使わない場合は、このページの「Code」→「Download ZIP」でダウンロードして展開してください。
+
 ## 使い方
 
 ```powershell
