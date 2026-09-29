@@ -9,6 +9,8 @@
 
 ![業務連絡に偽装した攻撃文を「隔離」と判定した画面](docs/screenshot-camouflage.png)
 
+**▶ [ブラウザで試す](https://sanarita.github.io/ipi-guard-chat/)**（インストール不要。判定はブラウザ内で行われ、ファイルは送信されません）
+
 ## 動作環境
 
 - Python 3.9 以上（追加のライブラリは不要）
