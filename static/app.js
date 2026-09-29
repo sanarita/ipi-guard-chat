@@ -78,6 +78,7 @@ function welcome() {
   post("bot", b => {
     b.append(el("p", null, "社外から受け取った文書を、Copilotに読ませる前に検査します。📎から添付するか、画面にドラッグしてください。"));
     b.append(el("p", "note", "対応形式：Word・PowerPoint・Excel・SVG・HTML・Markdown・テキスト（PDFは次のバージョンで対応予定）"));
+    if (BROWSER_MODE) b.append(el("p", "note", "このページでは、判定をすべてブラウザの中で行います。添付したファイルはどこにも送信されません。"));
   });
 }
 
@@ -88,21 +89,77 @@ async function scan(file) {
     chip.append(el("span", "ext", ext), el("span", null, file.name), el("span", "size", fmtSize(file.size)));
     b.append(chip);
   });
-  const wait = post("bot", b => b.append(el("p", "busy", "検査しています")));
+  const wait = post("bot", b => b.append(el("p", "busy", BROWSER_MODE && !engine ? "判定エンジンを準備しています（初回は数秒〜十数秒かかります）" : "検査しています")));
   try {
-    const res = await fetch("/api/scan", {
+    const data = BROWSER_MODE ? await scanInBrowser(file) : await scanOnServer(file);
+    wait.parentElement.remove();
+    last = data;
+    render(data);
+  } catch (err) {
+    wait.parentElement.remove();
+    post("bot", b => b.append(el("p", null, err.message)));
+  }
+}
+
+// ---- 判定の実行先 --------------------------------------------------------------
+// localhost で開いたときは server.py に送る。GitHub Pages などで開いたときは、
+// 同じ detector.py をブラウザ内の Python（Pyodide）で実行する。どちらもファイルは外部に送信しない。
+const BROWSER_MODE = !["127.0.0.1", "localhost"].includes(location.hostname);
+const PYODIDE_URL = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
+const MAX_BYTES = 20 * 1024 * 1024;
+let engine = null;
+let enginePromise = null;
+
+async function scanOnServer(file) {
+  let res;
+  try {
+    res = await fetch("api/scan", {
       method: "POST",
       headers: { "X-Filename": encodeURIComponent(file.name), "Content-Type": "application/octet-stream" },
       body: file,
     });
-    const data = await res.json();
-    wait.parentElement.remove();
-    if (!res.ok) return post("bot", b => b.append(el("p", null, data.message || "検査できませんでした。")));
-    last = data;
-    render(data);
   } catch {
-    wait.parentElement.remove();
-    post("bot", b => b.append(el("p", null, "検査サーバーに接続できません。server.py が起動しているか確認してください。")));
+    throw new Error("検査サーバーに接続できません。server.py が起動しているか確認してください。");
+  }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "検査できませんでした。");
+  return data;
+}
+
+function loadEngine() {
+  if (enginePromise) return enginePromise;
+  enginePromise = (async () => {
+    await new Promise((resolve, reject) => {
+      const sc = document.createElement("script");
+      sc.src = PYODIDE_URL + "pyodide.js";
+      sc.onload = resolve;
+      sc.onerror = () => reject(new Error("判定エンジンを読み込めませんでした。ネットワーク接続を確認してください。"));
+      document.head.append(sc);
+    });
+    const py = await loadPyodide({ indexURL: PYODIDE_URL });
+    const src = await (await fetch("detector.py", { cache: "no-store" })).text();
+    py.runPython(src);  // Python版と同じ判定エンジンをそのまま読み込む
+    engine = py;
+    return py;
+  })();
+  enginePromise.catch(() => { enginePromise = null; });
+  return enginePromise;
+}
+
+async function scanInBrowser(file) {
+  if (file.size > MAX_BYTES) throw new Error("20MBを超えるファイルは検査できません");
+  const py = await loadEngine();
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  py.globals.set("_fname", file.name);
+  py.globals.set("_fdata", bytes);
+  try {
+    const out = py.runPython("import json\njson.dumps(scan_bytes(_fname, bytes(_fdata.to_py())), ensure_ascii=False)");
+    return JSON.parse(out);
+  } catch {
+    throw new Error("検査中にエラーが発生しました。");
+  } finally {
+    py.globals.delete("_fname");
+    py.globals.delete("_fdata");
   }
 }
 
@@ -194,3 +251,4 @@ addEventListener("drop", e => {
 });
 
 welcome();
+if (BROWSER_MODE) loadEngine().catch(() => {});  // 先に読み込みを始めておく
